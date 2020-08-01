@@ -1,0 +1,13 @@
+This program should be capable of drawing rectangles of width
+that is directly proportional to the value of an array to be
+sorted on that index. The user should be able to choose the
+sorting algorithm to be performed by the left and right arrow 
+keys, the name of the selected algorithm should be displayed
+on the bottom of the display. The user should also have the
+choice of scrambling the array, sorting the array and setting
+the speed of the algorith. All of the keystrokes should be
+visible on the display. During a sort or a scramble, the
+rectangle of the current modified index should be filled in
+red, whereas all other in white. The display should be
+resizable, responsive and eye-appealing in most of the usual 
+window sizes.

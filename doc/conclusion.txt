@@ -1,0 +1,43 @@
+I finished this project in about ~50 hours, it has taught me a lot in SDL
+and general computer graphics. Though after finishing it I learned a few
+modern C techniques to handle stuff better, such as the atexit() stack.
+It was harder than I thought but not that challengeing. 
+Now I will describe the whole process as I remember it.
+My whole source code is ~1000 lines of C code.
+
+I started with a naive approach of creating a SWAP struct, which contained
+information about which two elements should be swapped, this is of course
+not applicable to most of the sorting algorithms. My problem was also that
+I couldn't do stuff recursively nor iteratively, I had to simulate this
+process with static variables. I shortly came to a conclusion that this is
+taking me nowhere and it was time to start again (Fortunately, the column
+drawing algorithm didn't need many changes).
+I created a drawing functions, taking an array of COLUMN as an argument,
+this was a pretty handy invention later, since it allowed me to highlight
+one element with a desired color at first, later it could highlight whole
+ranges of elements. At this stage, I also adopted the column design with a
+square on its top and the rest three times darker (credit to Eriksonn).
+Since I was drawing directly from the algorithm functions and there was no
+"game loop", I had to ensure that when the user closes the window or
+presses a button, the algorithm stop. I have created what I later started
+to call the "game state flag system", I have no idea how dumb or good this
+is, but it is essentialy a bunch of global booleans, accesible from
+anywhere, telling the program what to do. So when the algorithm called the
+update routine, it polled the user input and perhaps changed some flags.
+It is up to the routine to obey these rules, for example the generation
+function had to ignore the reset flag because you have to wait until
+the values are generated for the program to work correctly.
+Heapsort was by far the hardest, not to grasp, but to implement. It isn't
+even very long, the code is just really hard to comprehend. But programming
+algorithms was not the hardest thing at all here. Later in the process, I
+created a function which I call "drawpdate", it basically packs all the
+different actions needed for the program to work correctly and spits out
+a signal, either STEP_CONTINUE or STEP_ABORT, the latter signalizes the
+function to terminate as fast as possible, in favor of the speed. This was
+a little issue with recursive functions, such as merge sort, which took a
+while to quit. With this functionality, there is just one line needed to
+update the game within each sort. I implemented 10 most known sorts,
+including quicksort, mergesort, bubblesort, coctail sort, shellsort,
+heap sort and so on.
+One last thing, I hate non-comparative sorts, they just feel very weird to
+me.

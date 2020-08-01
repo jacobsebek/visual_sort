@@ -1,0 +1,475 @@
+DISCLAIMER:
+This program should not be used to compare individual sorts in
+speed, since each algorithm is drawn differently and not at
+the same speed as others.
+
+TUTORIAL:
+You can compile for your platform (forks appreciated) using the Makefile
+in the folder (it uses SDL from the parent folder so don't separate this
+project's directory)
+
+The use should be pretty intuitive with guides displayed on the screen.
+The program is highly customizable with command line options, each
+shell argument starts with a hyphen and a letter, taking one argument
+separated by a space. Capital B after the specification in this list
+means that this value is logical, thus is only true or false and every 
+non-null number results in this option being set to true, otherwise false.
+The number in parentheses after the specification depicts the default
+value that is used, when the parameter isn't specified.
+This is the list of all possible arguments :
+
+c ( 200): Count of array elements
+a (   0): The algorithm to start with (0-9) :
+		  selection; bubble; quick; coctail; heap; merge; insertion; intro;
+		  shell; lsd radix base 10;
+g (   0):B gradient option, each column is drawn with an HSV color. You can't
+		   see the column highliting with this option.
+m (   1):B Mode option, telling the program in what order should it sort, true
+		   means ascending, descending otherwise.
+s (   1):B Style option, true means that the columns should be rendered in a
+		   flat manner, 3D effect is used otherwise.
+w (1000): Width option specifying the width of the window (the height is always
+		  set to half the width)
+d (  10): delay, telling the program how many miliseconds should it wait between
+		  individual steps (making the program slower).
+x (   0):B eXtreme mode, allowing the renderer to be as fast as possible, disabling
+		   all visual effects leaving just the columns. Up to double the speed is
+		   possible to be achieved with this option true.
+r (   0): Random option, sets the seed of the random generator to a desired value
+		  (every time it is generated), if zero, the generation is always random.
+
+The program also prints stuff like checksums, sortchecks and time taken to sort
+into the console.
+
+Full code documentation :
+This part of the document steps through all of the source code for this project
+
+include/sorts.h :
+	including sdl so sdl typedefs can be used
+	
+	bool is included for logic
+
+	3 colors are defined (the 3rd should be used only in sortcheck and utility functions)
+	so they can be changed easily throughout the program
+
+	very useful macros are defined, i guess every program has these
+	the arrswap uses pointers because of passing incrementation (a++) etc. safety
+
+	STEP_ macros are globaly understood, obeyed and respected as the only reason
+	to continue or die
+
+	uints are still useful somewhere, but they are a big pain in the neck 
+	(uint i >= 0 for example), they should be used only where it is safe or you want to
+	emphasize unsigned int usage
+
+	column struct specifies what column range from left(l) to right(r) should be drawn
+	highlighted in the specified color
+
+	contains declarations of all the sort functions, only sort_check utility returns a value
+	(true on success, false otherwise) 
+
+src/main.c :
+	Including necessary SDL stuff, time for random seeds, string for text manipulation
+
+	bool for boolean logic values and better readability, sorts.h is going to get
+	described later.
+
+	Defining the size of the renderer
+
+	quit flag for signalizing complete program termination
+
+	pause for rendering current frame until not true
+
+	reset for returning	back to main 
+
+	norec (no recursive) to prevent recursive calls in functions that are called from the step function
+	for example, the generation function calls indirectly the step function, which can call
+	another instance of the generation function, this has to be prevented.
+
+	mode for specifying sort order, rainbow is the HSV gradient effect
+
+	style is the render style of the columns
+
+	extreme is the extreme mode for achieving maximum performance
+
+	seed is the next seed to use when generating
+
+	press_arrow signalizes that the left has been pressed if the value is negative 
+	and positive if the right one has been pressed. The absolute value of this variable is the time 
+	in miliseconds from the start of the program when it has been pressed
+
+	delay is the time to sleep between drawpdates
+	
+	ren is the global SDL_Renderer pointer
+
+	win is the global SDL_Window pointer
+
+	vals is the dynamically allocated array of sorted values
+
+	the size of vals
+
+	array of string, names to be rendered
+
+	a string for credits to be rendered
+
+	an array of function pointers to all the algorithms
+
+	the index of currently selected sort
+
+	*function definitions we'll get to later*
+
+	function for converting hsv to rgb
+		returns black black if one of the values are invalid
+		
+		puts hue from 0 to 360
+
+		convertion math
+
+		Creates an empty color struct for storing floating point values
+
+		convertion math
+
+	function for clamping a value between two values
+		using a ternary operator to decide and return the value as fast as possible
+
+	function for loading a texture from a file
+		uses the SDL_image's IMG_Load function to load a PNG file
+		
+		creates a texture from it
+
+		frees the unnecessary surface
+
+		sets the quit flag if loading was unsuccessful
+
+		returns the texture
+
+	function for loading a surface from a file
+		uses the SDL_image's IMG_Load function to load a PNG file
+
+		sets the quit flag if loading was unsuccessful
+
+		returns the surface
+
+	function for caching a font and rendering a a string to a texture 
+	(static allocations shall be freed by calling the function with an empty name)
+	This function is not very customisable in terms of the font
+		Number of monospace characters in the font image
+		
+		width of of character in pixels
+
+		saves the last used color so there's no need to redraw the whole font
+		if it is the same
+
+		The surface of the font needs to be a surface so pixel manipulation can be
+		performed nicely (all of this is not efficent but it is called only on the
+		beggining of the program so it is fine)
+
+		the font surface and texture are initialized
+
+		on the first call, the font gets initialized, if it fails, the quit flag gets set
+		
+		the charwidth gets caluclated
+
+		if the length of the input string is 0, the cache gets freed and the program returns
+		
+		if the last color is not the same, the pixels are colored to the desired color
+		and the font gets converted to a texture
+
+		a new texture is created to store the rendered text
+
+		if the initialization failed in either of these, the quit flag is set and the
+		function returns
+	
+		the blend mode and render target gets set
+
+		the texture is fully cleared
+
+		the individual characters are drawn one by one on the resultin texture with a
+		specified index on the font image
+
+	function for drawing a vertical gradient supporting negative height
+		boolean value signilazing if height is negative
+		
+		this variable stores the linear interpolation from 0 to 1 throughout the calculation
+		
+		the y of the drawn rectangle
+
+		the loop iterates over all the rectangles (sample_height is the height of one "line")
+
+	function for polling the user input and updating the program state
+		this static value decides if the press of the key is getting counted (user has to release
+		before pressing again to ensure one call pulses)
+
+		the event to be polled
+
+		if the user closes the window or performs a quit keystroke, the quir flag gets set
+
+		the keypress is getting evaluated only if everything has been released
+
+		if the arrows are pressed, the sort wraps around, the algorithm resets and press_arrow
+		gets set to the previously described value
+
+		space toggles pause
+
+		g generates values, unpauses and resets only if no-recursion is false
+
+		m toggles mode and resets the state
+
+		if a key is released, user is allowed to press again (yes, you can't press two keys at once,
+		but that is fine for this application)
+
+	function that cares about everything rendered and polled in the program
+	returns a STEP_ABORT macro if the calling enviroment should be terminated
+	and STEP_CONTINUE if not
+		these static variables define the distance of the column display from the edge on sides
+		(top is calculated on its own)
+
+		column width is calculated to fit the space
+
+		all the needed variables are register beforehand to maximize optimalization
+
+		size of the rendered texture is specified
+
+		the render texture is specified (it is needed to be streched well when the number of
+		elements does not divide with the display size) and errorchecked
+
+		the 4 pictures of guides for key presses are loaded from the resources folder
+		and put into an array
+
+		the names of the sorts are rendered (on first call)
+
+		the credits are rendered
+
+		the arrows/triangles are loaded (it is actually one triangle that is rendererd flipped)
+
+		repeats at least once, or until pause takes place (you can see that pause is prefered
+		before reset, so you can scroll between sorts when paused freely)
+
+		if the quit flag is high, all the cache gets safely destroyed (thats why you should never
+		call step() on its own and handle it)
+
+		if the extreme mode is off, the backlight gradient is drawn
+
+		all the elements are iterated, a color and height are chosen based on the
+		marked array, which specifies what ranges of indexes should be highlited with which
+		color and the height is directly proportional to the value.
+
+		The glow on the top of the column and the black gradient on it are drawn and stylized
+		(all the 3D effect is, is making the black gradient a tiny bit shorter) if the extreme
+		mode is off.
+
+		The column texture is rendered back to the window
+
+		A thin white line is drawn under the columns to hide the uglyness
+
+		the guides are drawn in the middle of the window
+
+		The arrows are drawn smaller, if less than 100 miliseconds has passed from them 
+		being pressed (using positive and negative values to store these two arrows just in one
+		variable)
+
+		the thread takes a nap
+
+		after unpause, if reset flag is on, the abort signal will be returned
+
+	function for initializing the SDL renderer and window for rendering
+		Initializes the video component of SDL
+
+		Creates a window with the desired size
+		
+		Creates a renderer for that window
+			
+		Sets the normal blend mode for the window renderer
+
+	function for pseudorandomly generating the values
+		initializes the vals array and quits if unsuccessful
+
+		sets the chosen seed if not null
+
+		this part of code creates an array of values smoothly going from 0 to valc
+		and chooses between them randomly to create the smooth random array
+		(could be done better but damn C is fast so whatever)
+
+		the program pauses automatically
+
+	the entry point, procesesses the shell arguments and hosts the main loop
+		the argument count has to be odd because every option has exactly one argument
+		
+		a for loop processes all the arguments and sets the values according to them
+
+		SDL is initialized and values are generated
+
+		A very simple loop that is repeated through the whole runtime and I am proud of
+		
+		When quit is high, all the allocated memory is freed
+
+src/sorts.c :
+	static functions exist in this file because some algorithms need additional arguments
+	they are all called through their standardized wrapper functions
+	This document does not explain how the algorithms work but a person of prior knwoledge
+	of these algorithms should understand the implementation
+
+	include sorts.h and SDL stuff
+
+	//standard libraries for debugging 
+
+	bool for logic
+
+	declaring all the extern global variables from main.c and drawpdate()
+
+	macros for the compare function (A greater, B smaller, B greater, A smaller, Equal)
+
+	typedef for a comparative operation
+
+	this function is used for comparing two values and getting the desired output
+	it was created because there was a need to efficiently and elegantly change the order
+	(mode)
+		if the values are equal, the return value is know straight away
+
+		depending on the mode, greater and less comparisons may get swapped
+		(all the sorts are written as if they were sorting in ascending order)
+
+		the function returns 0 if no of the conditions apply
+
+	this function iterates all the values-1 and checks if their neighbor is at the right place
+	returns 1 on success, 0 otherwise
+		no recursive flag is set high so step() cannot call functions
+		(you cannot abort sort_check)
+
+		declaration of a sum variable used for troubleshooting
+
+		this comparison is technically incorrect, but since every value shall be different
+		in this version, this check fails if the neighbors are the same
+
+		sum sums
+
+		this function cannot check for the return value of drawpdate since it ignores
+		resets
+
+		the sum has to add the very last element since the loop doesn't go over it
+
+		step() can call recursively again
+
+	private merge function merging [start..(start+end)/2] with [(start+end)/2..end]
+		the merge takes place only if both halfs consist of at least 1 element each
+
+		the middle of the array is used extensively
+
+		ordinary update call
+
+		merge both halfs first
+
+		the size of the output is calculated
+
+		a temporary array is created
+
+		"a pointer" and "b pointer" are indexes of the next inserted element from both
+		sub-arrays
+
+		this loop goes over the whole temporary array, setting each value accordingly
+		(this merge function merges only 2 sorted arrays)
+
+		an overly redundand code I made intentionally since I was getting lost
+		should be quite easy to understand with variable guides :
+		"bin" if b is in its scope
+		"ain" if a is in its scope
+		"bless" if b is less than a
+		"aless" if a is less than b
+
+		the temporary arrays is copied to the final one
+
+	merge sort function
+		This wrapper calls the merge sort function for the whole array
+
+	selection sort function
+		An extremely simple implementation of selection sort, I used the name "record"
+		(not smallest) because it depends on the mode
+
+	bubble sort function
+		An even simpler implementation of bubble sort
+
+		I would have never thought of making the end an ordinary ever decreasing
+		value, I got that from the book Algoritmy by Piotr Wroblewski
+
+	coctail sort function
+		This implementation may be harder to understand in favor of making the
+		code shorter, It was originaly comprised of 2 almost identical loops
+		
+		The direction of the index (1 or -1, left or right)
+
+		The index travels back and forth until there is less than 2 elements to sort
+
+		the new boundary we are looking for (saving the last swap)
+
+		The comparison differs depending on the direction
+
+		the new boundaries are set and the direction switches
+
+	private heap operation function moving the "start" element as deep as possible in the
+	scope of scope_start and end
+		basic not really needed error check
+
+		this iterative algorithm does not use swaps, it rather copies the value
+		to the underlying node to itself and if the iteration ends, the root
+		value is copied to the last node, which can be used to speed up the processes
+		by up to about 1/3 less array accesses
+
+		"li" - left index
+		"ri" - right index
+		the scope_start variable is important for the nodes to be treated as the scope_start
+		were the root (used in hybrid algorithms)
+	
+	private heap sorting function sort from start to end (for using in hybrid algorithms)
+		The first part heapifies the selection, visit all nodes except the leaves
+
+		the second part swaps the root with the last leaf and recovers the heap property,
+		decreasing the end at every iteration (very simple when broken down)
+
+	heap sort function
+		A wrapper that sort the whole array
+
+	private quick sorting function from left to right (recursive)
+		This is the most known and simple implementation of qsort I called it the 
+		"kerninghan qsort" with a slight change of not swapping the first with the
+		middle element at the beggining since it was doing very poorly on sorted
+		arrays (and makes it more understandable)
+
+		the sort takes place only if the selection is at least 2 elements in size
+
+		I am not going through the partitioning process, it basically reads the first
+		element in  the selection and moves all the smaller ones next to each other
+		and finally puts the pivot back
+
+		recursively sorts the the two partitions
+
+	quick sort function
+		a wrapper than sorts the whole array
+
+	insertion sort function
+		Uses a similar technique as the heap sort down function, it does not swap
+		as some implementations could, it rather finds the right index and shifts
+		everything already sorted to the right by one to create room and puts the element
+		in.
+
+		val is the value of the next element
+
+		insert is the index BEFORE which the new value is going to be inserted
+
+	private introsort function
+		This function is identical to the quicksort function, with the difference that
+		if the maxdepth passed is zero, it calls heapsort for the rest of the selection
+		and returns
+
+	introsort function
+		Wrapper function that sorts the whole array with the maxdepth used by GNU C++ stdlib
+
+	shell sort function
+		Uses the original shellsort from 1959 (taken from "The C programming language")
+
+	private counting sort function performed on a particular digit of an integer (LSD)
+		I don't feel qualified to explain this since I understand very little of it
+		and most of the code is taken from the site geeksforgeeks.com
+
+	radix sort function
+		Finds the number with the most digits and performs a base 10 LSD counting sort on 
+		each of those
